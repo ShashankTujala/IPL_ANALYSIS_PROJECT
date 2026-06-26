@@ -111,15 +111,15 @@ Batting Analysis
 
 Bowling Analysis
 
-[Batting Analysis](screenshots/bowling%20analysis.png)
+[Bowling Analysis](screenshots/bowling%20analysis.png)
 
 Player Comparison
 
-[Batting Analysis](screenshots/player%20comparision.png)
+[Player Comparision](screenshots/player%20comparision.png)
 
 Correlation Analysis
 
-[Batting Analysis](screenshotscorrelation%20analysis.png)
+[correlation Analysis](screenshotscorrelation%20analysis.png)
 
 
 Skills Demonstrated
