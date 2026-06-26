@@ -33,32 +33,24 @@ from src.analysis import best_econ_player
 from src.analysis import best_bowl_avg_player
 from src.analysis import best_bowling_sr
 from src.analysis import best_bbi_score
+from src.analysis import metriccorr
+from src.analysis import playercompare
+from src.report import generate_report
 
 data = batsman_data()
-bowl = bowler_data()
-fig1 = Top_Scorers(data)
-fig2 = Most_4s(data)
-fig3 = Most_6s(data)
-fig4 = Most_sr(data)
-fig5 = Best_avg(data)
-fig6 = Best_bowl_avg(bowl)
-fig7 = Best_Econ(bowl)
-fig8 = Most_4wkts(bowl)
-fig9 = Most_5wkts(bowl)
-fig10 = Best_bowl_sr(bowl)
-fig11 = sr_vs_avg(bowl)
-fig12 = corrheatmap(bowl)
-fig13 = Most_wkts(bowl)  
-
+bowl = bowler_data() 
+pdf_file = generate_report(data, bowl)
+with open(pdf_file, "rb") as pdf:
+    st.download_button(label="📄 Download IPL Report",data=pdf,file_name="IPL_Analysis_Report.pdf",mime="application/pdf")
 st.title("IPL ANALYSIS DASHBOARD")
 
-tab1, tab2, batterstab, bowlerstab = st.tabs(['Batting Analysis','Bowling Analysis','Batsman individual Analysis','bowlers individual Analysis'])
+tab1, tab2, batterstab, bowlerstab, corrmaps= st.tabs(['Batting Analysis','Bowling Analysis','Batsman Individual Stats','Bowlers Individual Stats', 'Corelation Analysis'])
 with tab1:
-    st.pyplot(Top_Scorers(data))
-    st.pyplot(Most_4s(data))
+    st.plotly_chart(Top_Scorers(data), key = 'c1')
+    st.plotly_chart(Most_4s(data), key = 'c2')
 with tab2:
-    st.pyplot(Most_wkts(bowl))
-    st.pyplot(Best_Econ(bowl))
+    st.plotly_chart(Most_wkts(bowl), key = 'c3')
+    st.plotly_chart(Best_Econ(bowl), key = 'c4')
 with batterstab:
     player_stat = st.selectbox("Select Player", data['Player'].unique())
     player_data = data[data['Player'] == player_stat].iloc[0]
@@ -68,8 +60,7 @@ with batterstab:
         st.metric('Matches played', player_data['Mat'] )
     with col2:    
         st.metric('Runs', player_data['Runs'])
-        st.metric('Strike Rate', player_data['SR'])
-        
+        st.metric('Strike Rate', player_data['SR'])    
     with col3:
         st.metric('4s', player_data['4s'] )
         st.metric('6s', player_data['6s'] ) 
@@ -82,6 +73,48 @@ with batterstab:
     with col6:
         st.metric('100s', player_data['100'])
         st.metric('50s', player_data['50'])
+
+    st.subheader('Head To Head Comparsion')
+
+    col1, col2 = st.columns(2) 
+    pname = data['Player'].unique()
+    p1 = col1.selectbox('Choose Player 1', data['Player'].unique(), key = 's5')
+    remain_names = [col for col in pname if col != p1]
+    p2 = col2.selectbox('Choose Player 2', remain_names, key = 's6')
+
+    st.subheader("Select Metrics")
+    cb1, cb2, cb3 = st.columns(3)
+    stats = []
+    with cb1:
+        if st.checkbox("Runs", value=True):
+            stats.append("Runs")
+        if st.checkbox("Average"):
+            stats.append("Avg")
+        if st.checkbox("Strike Rate", value=True):
+            stats.append("SR")
+        if st.checkbox("Highest Score"):
+            stats.append("HS")
+    with cb2:
+        if st.checkbox("Matches"):
+            stats.append("Mat")
+        if st.checkbox("Innings"):
+            stats.append("Inns")
+        if st.checkbox("Not Outs"):
+            stats.append("NO")
+        if st.checkbox("Balls Faced"):
+            stats.append("BF")
+    with cb3:
+        if st.checkbox("100s"):
+            stats.append("100")
+        if st.checkbox("50s"):
+            stats.append("50")
+        if st.checkbox("Fours", value=True):
+            stats.append("4s")
+        if st.checkbox("Sixes", value=True):
+            stats.append("6s")
+
+    st.plotly_chart(playercompare(data,p1,p2,stats))
+
 with bowlerstab:
     player_stat = st.selectbox("Select Player", bowl['Player'].unique())
     player_data = bowl[bowl['Player'] == player_stat].iloc[0]
@@ -104,6 +137,124 @@ with bowlerstab:
     with col6:
         st.metric('Overs Delivered', player_data['Ov'])
         st.metric('Runs conceded', player_data['Runs'])
+    
+    st.subheader('Head To Head Comparsion')
+
+    col1, col2 = st.columns(2) 
+    pname = bowl['Player'].unique()
+    p1 = col1.selectbox('Choose Player 1', bowl['Player'].unique(), key = 's7')
+    remain_names = [col for col in pname if col != p1]
+    p2 = col2.selectbox('Choose Player 2', remain_names, key = 's8')
+
+    st.subheader("Select Metrics")
+    cb11, cb22, cb33 = st.columns(3)
+    stats = []
+    with cb11:
+        if st.checkbox("Runs", value=True, key = 'bcb1'):
+            stats.append("Runs")
+        if st.checkbox("Average", key = 'bcb2'):
+            stats.append("Avg")
+        if st.checkbox("Bowling Strike Rate", value=True, key = 'bcb3'):
+            stats.append("SR")
+        if st.checkbox("Wickets Scored", value=True, key = 'bcb4'):
+            stats.append("Wkts")
+    with cb22:
+        if st.checkbox("Matches", key = 'bcb5'):
+            stats.append("Mat")
+        if st.checkbox("Innings", key = 'bcb6'):
+            stats.append("Inns")
+        if st.checkbox("Overs Delivered", key = 'bcb7'):
+            stats.append("Ov")
+        if st.checkbox("Economy", value=True, key = 'bcb8'):
+            stats.append("Econ")
+    with cb33:
+        if st.checkbox("4 Wicket Hauls", key = 'bcb9'):
+            stats.append("4w")
+        if st.checkbox("5 Wicket Hauls", key = 'bcb10'):
+            stats.append("5w")
+    st.plotly_chart(playercompare(bowl,p1,p2,stats))
+
+    st.subheader('BBI Comparision')
+    col1, col2 = st.columns(2)
+    
+    bpnames = bowl['Player'].unique()
+    bp1 = col1.selectbox('Choose Player 1', bowl['Player'].unique(), key = 's9')
+    remain_names = [col for col in bpnames if col != bp1]
+    bp2 = col2.selectbox('Choose Player 2', remain_names, key = 's10')
+
+    player1_data = bowl[bowl["Player"] == bp1].iloc[0]
+    player2_data = bowl[bowl["Player"] == bp2].iloc[0]
+
+    with col1:
+        st.metric("BBI", player1_data["BBI"])
+
+    with col2:
+        st.metric("BBI", player2_data["BBI"])
+    
+
+with corrmaps:
+    st.subheader('Batting Metrics')
+    corr = data.corr(numeric_only=True)
+    mapcol1 , mapcol2 = st.columns(2)
+    mapcol1dis = mapcol1.selectbox("metric 1", corr.columns, key = 's1')
+    remaining_metrics = [col for col in corr.columns if col != mapcol1dis]
+    mapcol2dis = mapcol2.selectbox("metric 2", remaining_metrics, key = 's2')
+    
+    corr_value = corr.loc[mapcol1dis,mapcol2dis]
+
+    st.metric("Correlation", f"{corr_value:.2f}")
+    if corr_value >= 0.7:
+        st.success("Strong Positive Correlation")
+    elif corr_value >= 0.4:
+        st.info("Moderate Positive Correlation")
+    elif corr_value >= 0:
+        st.warning("Weak Positive Correlation")
+    elif corr_value <= -0.7:
+        st.success("Strong Negative Correlation")
+    elif corr_value <= -0.4:
+        st.info("Moderate Negative Correlation")
+    else:
+        st.warning("Weak Negative Correlation")
+    if mapcol1dis == mapcol2dis:
+        st.info("Please select two different metrics to view the scatter plot.")
+    else:
+        st.plotly_chart(metriccorr(data, mapcol1dis, mapcol2dis),use_container_width=True)
+    
+    
+    st.subheader('Bowling Metrics')
+    corr = bowl.corr(numeric_only=True)
+    mapcol1 , mapcol2 = st.columns(2)
+    mapcol1dis = mapcol1.selectbox("metric 1", corr.columns, key = 's3')
+    remaining_metrics = [col for col in corr.columns if col != mapcol1dis]
+    mapcol2dis = mapcol2.selectbox("metric 2", remaining_metrics, key = 's4')
+    
+    corr_value = corr.loc[mapcol1dis,mapcol2dis]
+
+    st.metric("Correlation", f"{corr_value:.2f}")
+    if corr_value >= 0.7:
+        st.success("Strong Positive Correlation")
+    elif corr_value >= 0.4:
+        st.info("Moderate Positive Correlation")
+    elif corr_value >= 0:
+        st.warning("Weak Positive Correlation")
+    elif corr_value <= -0.7:
+        st.success("Strong Negative Correlation")
+    elif corr_value <= -0.4:
+        st.info("Moderate Negative Correlation")
+    else:
+        st.warning("Weak Negative Correlation")
+    if mapcol1dis == mapcol2dis:
+        st.info("Please select two different metrics to view the scatter plot.")
+    else:
+        st.plotly_chart(metriccorr(bowl, mapcol1dis, mapcol2dis),use_container_width=True)
+    
+    
+    st.subheader('Heatmaps')
+    mapchoose = st.radio('Choose Heatmaps',['Bowling Heatmap','Batting Heatmap'], key = 'ch1')
+    if mapchoose == 'Bowling Heatmap':
+        st.plotly_chart(corrheatmap(bowl))
+    if mapchoose == 'Batting Heatmap':
+        st.plotly_chart(corrheatmap(data))
 
 st.subheader('Tournament Inights')
 totruns , hruns = st.columns(2) 
@@ -160,43 +311,43 @@ options = st.sidebar.selectbox(
     "choose analysis", ["Top Scorers","Most Fours","Most Sixes","Strike Rate","Batting Average","Most Wickets","Bowling Average","Economy Rate","Bowling Strike Rate","Correlation Heatmap", "Strike Rate VS Average", "Most 4 wicket Haul", "Most 5 wicket Haul"]
 )
 if options == "Top Scorers":
-    st.pyplot(fig1)
+    st.plotly_chart(Top_Scorers(data),key = 'c5')
 
 if options == "Most Fours":
-    st.pyplot(fig2)
+    st.plotly_chart(Most_4s(data), key = 'c6')
 
 if options == "Most Sixes":
-    st.pyplot(fig3)    
+    st.plotly_chart(Most_6s(data), key = 'c7')    
 
 if options == "Strike Rate":
-    st.pyplot(fig4)
+    st.plotly_chart(Most_sr(data), key = 'c8')
 
 if options == "Batting Average":
-    st.pyplot(fig5)
+    st.plotly_chart(Best_avg(data), key = 'c9')
 
 if options == "Most Wickets":
-    st.pyplot(fig13)
+    st.plotly_chart(Most_wkts(bowl), key = 'c10')
 
 if options == "Bowling Average":
-    st.pyplot(fig6)
+    st.plotly_chart(Best_bowl_avg(bowl), key = 'c11')
 
 if options == "Economy Rate":
-    st.pyplot(fig7)
+    st.plotly_chart(Best_Econ(bowl), key = 'c12')
 
 if options == "Bowling Strike Rate":
-    st.pyplot(fig10)
+    st.plotly_chart(Best_bowl_sr(bowl), key = 'c13')
 
 if options == "Correlation Heatmap":
-    st.pyplot(fig12)
+    st.plotly_chart(corrheatmap(bowl), key = 'c14')
 
 if options == "Strike Rate VS Average":
-    st.pyplot(fig11)
+    st.plotly_chart(sr_vs_avg(bowl), key = 'c15')
 
 if options == "Most 4 wicket Haul":
-    st.pyplot(fig8)
+    st.plotly_chart(Most_4wkts(bowl), key = 'c16')
 
 if options == "Most 5 wicket Haul":
-    st.pyplot(fig9)
+    st.plotly_chart(Most_5wkts(bowl), key = 'c17')
  
 st.subheader("Datasets")
 datasets = st.sidebar.selectbox("Datasets", ["Batsman data","bowlers data"])
